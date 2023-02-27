@@ -182,34 +182,34 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path):
 # end of function definitions
 ###########################################################################################################
 
+if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(description='Run SAMSEG Longitudinal Pipeline on cohort.')
+    parser.add_argument('-i', '--input_directory', help='Folder of derivatives in BIDS database.', required=True)
+    parser.add_argument('-n', '--number_of_workers', help='Number of parallel processing cores.', type=int, default=os.cpu_count()-1)
+    parser.add_argument('-f', '--freesurfer_path', help='Path to freesurfer binaries.', default='/home/twiltgen/Tun_software/Freesurfer/FS_7.3.2/freesurfer')
 
-parser = argparse.ArgumentParser(description='Run SAMSEG Longitudinal Pipeline on cohort.')
-parser.add_argument('-i', '--input_directory', help='Folder of derivatives in BIDS database.', required=True)
-parser.add_argument('-n', '--number_of_workers', help='Number of parallel processing cores.', type=int, default=os.cpu_count()-1)
-parser.add_argument('-f', '--freesurfer_path', help='Path to freesurfer binaries.', default='/home/twiltgen/Tun_software/Freesurfer/FS_7.3.2/freesurfer')
+    # read the arguments
+    args = parser.parse_args()
 
-# read the arguments
-args = parser.parse_args()
+    # generate derivatives/labels/
+    derivatives_dir = os.path.join(args.input_directory, "derivatives/samseg-longitudinal-7.3.2")
+    Path(derivatives_dir).mkdir(parents=True, exist_ok=True)
+    data_root = Path(os.path.join(args.input_directory))
 
-# generate derivatives/labels/
-derivatives_dir = os.path.join(args.input_directory, "derivatives/samseg-longitudinal-7.3.2")
-Path(derivatives_dir).mkdir(parents=True, exist_ok=True)
-data_root = Path(os.path.join(args.input_directory))
+    dirs = sorted(list(data_root.glob('*')))
 
-dirs = sorted(list(data_root.glob('*')))
+    # filter directories to only include sub-m folders
+    dirs = [str(x) for x in dirs]
+    dirs = [x for x in dirs if "sub-m" in x]
 
-# filter directories to only include sub-m folders
-dirs = [str(x) for x in dirs]
-dirs = [x for x in dirs if "sub-m" in x]
+    files = split_list(dirs, args.number_of_workers)
 
-files = split_list(dirs, args.number_of_workers)
+    # initialize multithreading
+    pool = multiprocessing.Pool(processes=args.number_of_workers)
+    # creation, initialisation and launch of the different processes
+    for x in range(0, args.number_of_workers):
+        pool.apply_async(process_samseg, args=(files[x], derivatives_dir, args.freesurfer_path))
 
-# initialize multithreading
-pool = multiprocessing.Pool(processes=args.number_of_workers)
-# creation, initialisation and launch of the different processes
-for x in range(0, args.number_of_workers):
-    pool.apply_async(process_samseg, args=(files[x], derivatives_dir, args.freesurfer_path))
-
-pool.close()
-pool.join()
+    pool.close()
+    pool.join()

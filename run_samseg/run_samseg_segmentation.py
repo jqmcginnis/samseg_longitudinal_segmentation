@@ -19,7 +19,7 @@ def getSubjectID(path):
     indices = [i for i, s in enumerate(stringList) if 'sub-' in s]
     text = stringList[indices[0]]
     try:
-        found = re.search(r'sub-(\w+)_', text).group(1)
+        found = re.search(r'sub-([a-zA-Z0-9]+)', text).group(1)
     except AttributeError:
         found = ''
     return found
@@ -76,18 +76,23 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path):
         ### perform registartion with both T1w images
         # do the registration in a template folder and distribute its results to BIDS conform output directories later
         # create template folder
+        print(t1w)
         temp_dir = os.path.join(derivatives_dir, f'sub-{getSubjectID(t1w[0])}', 'temp')
+        print(temp_dir)
         temp_dir_output = os.path.join(temp_dir, "output")
+        print(temp_dir_output)
         Path(temp_dir_output).mkdir(parents=True, exist_ok=True)
         # pre-define paths of registered images 
         t1w_reg = [str(Path(x).name).replace("T1w.nii.gz", "space-common_T1w.mgz") for x in t1w]
         flair_reg_field = [str(Path(x).name).replace("FLAIR.nii.gz", "space-common_FLAIR.lta") for x in flair]
         flair_reg = [str(Path(x).name).replace("FLAIR.nii.gz", "space-common_FLAIR.mgz") for x in flair]
         # call SAMSEG 
+        print(getSubjectID(t1w[0]))
         os.system(f'export FREESURFER_HOME={freesurfer_path} ; \
                     cd {temp_dir}; \
                     mri_robust_template --mov {" ".join(map(str, t1w))} --template mean.mgz --satit --mapmov {" ".join(map(str, t1w_reg))};\
-                    ')
+                    ')        
+        
 
         ### co-register flairs to their corresponding registered T1w images
         # initialize an empty list fo timepoint argument for samseg that will be used later
